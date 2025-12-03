@@ -258,7 +258,7 @@ pub enum Operation<'a> {
     /// FUSE_RENAME2 = 45,
     ///
     /// Available when the protocol version is greater than 7.22.
-    /// This is checked by the kernel so that DatenLord won't receive such a
+    /// This is checked by the kernel so that won't receive such a
     /// request.
     ///
     /// https://github.com/torvalds/linux/blob/8f6f76a6a29f36d2f3e4510d0bde5046672f6924/fs/fuse/dir.c#L1077C2-L1088C3

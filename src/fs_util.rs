@@ -11,15 +11,15 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::protocol::FuseAttr;
-use crate::error::{DatenLordError, DatenLordResult};
+use crate::error::{AsyncFusexError, AsyncFusexResult};
 use crate::util;
 
 /// Build error result from `nix` error code
 /// # Errors
 ///
 /// Return the built `Err(anyhow::Error(..))`
-pub fn build_error_result_from_errno<T>(error_code: Errno, err_msg: String) -> DatenLordResult<T> {
-    Err(DatenLordError::from(
+pub fn build_error_result_from_errno<T>(error_code: Errno, err_msg: String) -> AsyncFusexResult<T> {
+    Err(AsyncFusexError::from(
         anyhow::Error::new(error_code).context(err_msg),
     ))
 }
@@ -195,14 +195,14 @@ impl FileAttr {
         param: &SetAttrParam,
         context_uid: u32,
         context_gid: u32,
-    ) -> DatenLordResult<Option<FileAttr>> {
+    ) -> AsyncFusexResult<Option<FileAttr>> {
         let cur_attr = *self;
         let mut dirty_attr = cur_attr;
 
         let st_now = SystemTime::now();
         let mut attr_changed = false;
 
-        let check_permission = || -> DatenLordResult<()> {
+        let check_permission = || -> AsyncFusexResult<()> {
             if NEED_CHECK_PERM {
                 //  owner is root check the uid
                 if cur_attr.uid == 0 && context_uid != 0 {
@@ -322,7 +322,7 @@ impl FileAttr {
     ///        └─ Special: Set User ID (suid), Set Group ID (sgid), and Sticky Bit (stky).
     /// When Sticky Bit set on a directory, files in that directory may only be unlinked or -
     /// renamed by root or the directory owner or the file owner.
-    pub fn check_perm(&self, uid: u32, gid: u32, access_mode: u8) -> DatenLordResult<()> {
+    pub fn check_perm(&self, uid: u32, gid: u32, access_mode: u8) -> AsyncFusexResult<()> {
         if NEED_CHECK_PERM {
             self.check_perm_inner(uid, gid, access_mode)
         } else {
@@ -333,7 +333,7 @@ impl FileAttr {
     /// If `NEED_CHECK_PERM` is true, then check permission by ourselves not
     /// rely on kernel.
     #[inline]
-    fn check_perm_inner(&self, uid: u32, gid: u32, access_mode: u8) -> DatenLordResult<()> {
+    fn check_perm_inner(&self, uid: u32, gid: u32, access_mode: u8) -> AsyncFusexResult<()> {
         debug_assert!(
             access_mode <= 0o7 && access_mode != 0,
             "check_perm() found access_mode={access_mode} invalid",

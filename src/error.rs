@@ -1,4 +1,3 @@
-//! `DatenLord` Error Code
 use std::path::PathBuf;
 
 use thiserror::Error;
@@ -20,11 +19,9 @@ macro_rules! function_name {
     }};
 }
 
-/// `DatenLord` Result type
-pub type DatenLordResult<T> = Result<T, DatenLordError>;
-/// `DatenLord` error code
+pub type AsyncFusexResult<T> = Result<T, AsyncFusexError>;
 #[derive(Error, Debug)]
-pub enum DatenLordError {
+pub enum AsyncFusexError {
     /// Error caused by std::io::Error
     #[error("IoErr, the error is {:?}, context is {:#?}", .source, .context)]
     IoErr {
@@ -127,10 +124,6 @@ pub enum DatenLordError {
         context: Vec<String>,
     },
 
-
-
-
-
     /// Error caused by nix::Error
     #[error("NixErr, the error is {:?}, context is {:#?}", .source, .context)]
     NixErr {
@@ -186,7 +179,7 @@ pub enum DatenLordError {
         context: Vec<String>,
     },
 
-    /// Error caused by datenlord's internal logic
+    /// Error caused by internal logic
     #[error("InternalErr, the error is {} context is {:#?}", .source,.context)]
     InternalErr {
         /// Error source
@@ -228,15 +221,12 @@ pub enum DatenLordError {
     // PersistError(persist::PersistError),
 }
 
-/// Add context to `DatenLordResult`
 pub trait Context<T, E> {
-    /// Add context to `DatenLordResult`
-    fn add_context<C>(self, ctx: C) -> DatenLordResult<T>
+    fn add_context<C>(self, ctx: C) -> AsyncFusexResult<T>
     where
         C: Into<String>;
 
-    /// Add context to `DatenLordResult` lazily
-    fn with_context<C, F>(self, f: F) -> DatenLordResult<T>
+    fn with_context<C, F>(self, f: F) -> AsyncFusexResult<T>
     where
         C: Into<String>,
         F: FnOnce() -> C;
@@ -244,10 +234,10 @@ pub trait Context<T, E> {
 
 impl<T, E> Context<T, E> for Result<T, E>
 where
-    E: std::error::Error + Into<DatenLordError>,
+    E: std::error::Error + Into<AsyncFusexError>,
 {
     #[inline]
-    fn add_context<C>(self, ctx: C) -> DatenLordResult<T>
+    fn add_context<C>(self, ctx: C) -> AsyncFusexResult<T>
     where
         C: Into<String>,
     {
@@ -255,7 +245,7 @@ where
     }
 
     #[inline]
-    fn with_context<C, F>(self, context_func: F) -> DatenLordResult<T>
+    fn with_context<C, F>(self, context_func: F) -> AsyncFusexResult<T>
     where
         C: Into<String>,
         F: FnOnce() -> C,
@@ -264,15 +254,13 @@ where
     }
 }
 
-impl DatenLordError {
-    /// Add context for `DatenLordError`
+impl AsyncFusexError {
     #[inline]
     #[must_use]
     pub fn add_context<C>(mut self, ctx: C) -> Self
     where
         C: Into<String>,
     {
-        /// Append context for `DatenLordError`
         macro_rules! append_context {
             ($context: ident, [$($target:ident),*]) => {
                 match self {
@@ -313,7 +301,6 @@ impl DatenLordError {
         self
     }
 
-    /// Add context for `DatenLordError` lazily
     #[inline]
     #[must_use]
     pub fn with_context<C, F>(self, context_fn: F) -> Self
@@ -325,10 +312,9 @@ impl DatenLordError {
     }
 }
 
-/// Implement from trait for `DatenLordError`
 macro_rules! implement_from {
     ($source:path, $target:ident) => {
-        impl From<$source> for DatenLordError {
+        impl From<$source> for AsyncFusexError {
             #[inline]
             fn from(error: $source) -> Self {
                 Self::$target {

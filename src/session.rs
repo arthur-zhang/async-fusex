@@ -249,6 +249,17 @@ pub struct Session<F: FileSystem + Send + Sync + 'static> {
     filesystem: Arc<F>,
     // fuse_request_spawn_handle: GcHandle,
 }
+pub async fn new_session<F>( mount_path: &Path, fs: F)->anyhow::Result<Session<F>> where F: FileSystem + Send + Sync + 'static {
+    let fuse_fd = mount::mount(mount_path).await.context("Failed to mount FUSE")?;
+    let fsarc = Arc::new(fs);
+
+    Ok(Session{
+        fuse_fd: Arc::new(FuseFd(fuse_fd)),
+        proto_version: AtomicCell::new(ProtoVersion::UNSPECIFIED),
+        mount_path: mount_path.to_owned(),
+        filesystem: fsarc,
+    })
+}
 
 /// FUSE device fd
 #[derive(Debug)]
@@ -256,15 +267,18 @@ struct FuseFd(RawFd);
 
 impl Drop for FuseFd {
     fn drop(&mut self) {
+        println!("Dropping FUSE fd {}", self.0);
         unistd::close(self.0).ok();
     }
 }
 
 impl<F: FileSystem + Send + Sync + 'static> Drop for Session<F> {
     fn drop(&mut self) {
+        println!("Dropping FUSE session");
         futures::executor::block_on(async {
             let mount_path = &self.mount_path;
             let res = mount::umount(mount_path).await;
+            println!("umount result: {:?}", res);
             match res {
                 Ok(..) => info!("Session::drop() successfully umount {:?}", mount_path),
                 Err(e) => error!(

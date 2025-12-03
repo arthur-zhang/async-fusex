@@ -1,5 +1,4 @@
 //! The `FileSystem` trait
-use std::fmt::Debug;
 use std::path::Path;
 
 use async_trait::async_trait;

@@ -223,9 +223,9 @@ impl<'a> ReplyRaw<'a> {
 
     #[allow(clippy::wildcard_enum_match_arm)]
     /// Send error response to FUSE kernel
-    async fn send_error(self, err: DatenLordError) -> nix::Result<usize> {
+    async fn send_error(self, err: AsyncFusexError) -> nix::Result<usize> {
         match err {
-            DatenLordError::InternalErr { source, context } => {
+            AsyncFusexError::InternalErr { source, context } => {
                 let error_code = if let Some(nix_err) =
                     source.root_cause().downcast_ref::<nix::Error>()
                 {
@@ -284,7 +284,7 @@ impl_fuse_reply_new_for! {
     ReplyXAttr,
 }
 
-use crate::error::DatenLordError;
+use crate::error::AsyncFusexError;
 use crate::fs_util::StatFsParam;
 
 /// Impl fuse reply error
@@ -293,7 +293,7 @@ macro_rules! impl_fuse_reply_error_for{
         $(impl $t<'_> {
             #[allow(dead_code)]
             /// fuse reply error
-            pub async fn error(self, err: DatenLordError) -> nix::Result<usize> {
+            pub async fn error(self, err: AsyncFusexError) -> nix::Result<usize> {
                 self.reply.send_error(err).await
             }
 
