@@ -604,7 +604,7 @@ pub mod fuse_compat_configs {
 
 pub use fuse_compat_configs::*;
 
-use crate::fs::fs_util::INum;
+use crate::fs_util::INum;
 
 /// FUSE entry response `fuse_entry_out`
 #[derive(Debug)]

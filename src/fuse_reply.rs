@@ -216,7 +216,7 @@ impl<'a> ReplyRaw<'a> {
     async fn send_error_code(self, error_code: Errno) -> nix::Result<usize> {
         // FUSE requires the error number to be negative
         self.send_raw_message(
-            crate::async_fuse::util::convert_nix_errno_to_cint(error_code).overflow_neg(),
+            crate::util::convert_nix_errno_to_cint(error_code).overflow_neg(),
             (),
         )
     }
@@ -233,7 +233,7 @@ impl<'a> ReplyRaw<'a> {
                         panic!(
                             "should not send nix::errno::Errno::UnknownErrno to FUSE kernel, \
                                     the error is: {} ,context is : {:?}",
-                            crate::common::util::format_anyhow_error(&source),
+                            crate::util::format_anyhow_error(&source),
                             context,
                         );
                     } else {
@@ -242,7 +242,7 @@ impl<'a> ReplyRaw<'a> {
                 } else {
                     panic!(
                             "should not send non-nix error to FUSE kernel, the error is: {},context is : {:?}",
-                            crate::common::util::format_anyhow_error(&source),context,
+                            crate::util::format_anyhow_error(&source),context,
                         );
                 };
                 self.send_error_code(*error_code).await
@@ -284,8 +284,8 @@ impl_fuse_reply_new_for! {
     ReplyXAttr,
 }
 
-use crate::common::error::DatenLordError;
-use crate::fs::fs_util::StatFsParam;
+use crate::error::DatenLordError;
+use crate::fs_util::StatFsParam;
 
 /// Impl fuse reply error
 macro_rules! impl_fuse_reply_error_for{
@@ -629,14 +629,14 @@ impl<'a> ReplyDirectory<'a> {
             ino,
             off: offset.cast(),
             namelen: name_bytes.len().cast(),
-            typ: crate::async_fuse::util::mode_from_kind_and_perm(kind, 0).overflow_shr(12),
+            typ: crate::util::mode_from_kind_and_perm(kind, 0).overflow_shr(12),
         };
         let entlen = dirent.size_with_name();
 
         // This is similar to call `FUSE_REC_ALIGN(entlen)` in `fuse.h`.
         //
         // <https://github.com/torvalds/linux/blob/b85ea95d086471afb4ad062012a4d73cd328fa86/include/uapi/linux/fuse.h#L988-L989>
-        let entsize = super::super::util::round_up(entlen, mem::size_of::<u64>()); // 64bit align
+        let entsize = crate::util::round_up(entlen, mem::size_of::<u64>()); // 64bit align
 
         let padlen = entsize.overflow_sub(entlen);
         if self.data.len().overflow_add(entsize) > self.data.capacity() {

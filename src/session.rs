@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, UNIX_EPOCH};
 
-use crate::common::task_manager::{GcHandle, TaskName, TASK_MANAGER};
 use aligned_utils::bytes::AlignedBytes;
 use anyhow::{anyhow, Context};
 use clippy_utilities::Cast;
@@ -23,7 +22,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, instrument};
 
 use super::context::ProtoVersion;
-use super::file_system::{FileSystem, FuseFileSystem};
+use super::file_system::{FileSystem};
 use super::fuse_reply::{
     ReplyAttr, ReplyBMap, ReplyCreate, ReplyData, ReplyDirectory, ReplyEmpty, ReplyEntry,
     ReplyInit, ReplyLock, ReplyOpen, ReplyStatFs, ReplyWrite, ReplyXAttr,
@@ -39,9 +38,7 @@ use super::protocol::{
     FATTR_MTIME, FATTR_SIZE, FATTR_UID, FUSE_ASYNC_READ, FUSE_KERNEL_MINOR_VERSION,
     FUSE_KERNEL_VERSION, FUSE_RELEASE_FLUSH,
 };
-use crate::async_fuse::fuse::de::DeserializeError;
-use crate::fs::datenlordfs::MetaData;
-use crate::fs::fs_util::{CreateParam, FileLockParam, RenameParam, SetAttrParam};
+use crate::fs_util::{CreateParam, FileLockParam, RenameParam, SetAttrParam};
 
 /// We generally support async reads
 #[cfg(target_os = "linux")]
@@ -104,13 +101,13 @@ mod _fuse_fd_clone {
 }
 
 use _fuse_fd_clone::fuse_fd_clone;
+use crate::de::DeserializeError;
 
 /// A loop to read requests from FUSE device continuously
 #[allow(clippy::needless_pass_by_value)]
 fn fuse_device_reader(
     buffer_tx: Sender<(File, AlignedBytes)>,
     buffer_rx: Receiver<(File, AlignedBytes)>,
-    fuse_request_spawn_handle: GcHandle,
     runtime_handle: Handle,
     proto_version: ProtoVersion,
     fs: Arc<dyn FileSystem + Send + Sync>,
@@ -169,7 +166,7 @@ fn fuse_device_reader(
             }
         };
 
-        let spawn_result = runtime_handle.block_on(fuse_request_spawn_handle.spawn(|_| {
+        runtime_handle.block_on(async{
             process_fuse_request(
                 buffer,
                 size,
@@ -177,12 +174,12 @@ fn fuse_device_reader(
                 Arc::clone(&fs),
                 buffer_tx.clone(),
                 proto_version,
-            )
-        }));
-        if spawn_result.is_err() {
-            info!("Try to spawn task of `FuseRequest` after shutdow.");
-            return;
-        }
+            ).await
+        });
+        // if spawn_result.is_err() {
+        //     info!("Try to spawn task of `FuseRequest` after shutdow.");
+        //     return;
+        // }
     }
 }
 
@@ -230,7 +227,7 @@ async fn process_fuse_request(
         panic!(
             "failed to process req={:?}, the error is: {}",
             fuse_req,
-            crate::async_fuse::util::format_nix_error(e), // TODO: refactor format_nix_error()
+            crate::util::format_nix_error(e), // TODO: refactor format_nix_error()
         );
     }
     let res = sender.send((file, byte_buffer));
@@ -250,8 +247,7 @@ pub struct Session<F: FileSystem + Send + Sync + 'static> {
     mount_path: PathBuf,
     /// The underlying FUSE file system
     filesystem: Arc<F>,
-    /// A handle to spawn FUSE Resuest tasks
-    fuse_request_spawn_handle: GcHandle,
+    // fuse_request_spawn_handle: GcHandle,
 }
 
 /// FUSE device fd
@@ -280,41 +276,6 @@ impl<F: FileSystem + Send + Sync + 'static> Drop for Session<F> {
     }
 }
 
-/// Create FUSE session
-#[allow(clippy::clone_on_ref_ptr)] // allow this clone to transform trait to sub-trait
-pub async fn new_fuse_session<M>(
-    mount_path: &Path,
-    fs: FuseFileSystem<M>,
-) -> anyhow::Result<Session<FuseFileSystem<M>>>
-where
-    M: MetaData + Send + Sync + 'static,
-{
-    // let mount_path = Path::new(mount_point);
-    assert!(
-        mount_path.is_dir(),
-        "the input mount path={mount_path:?} is not a directory"
-    );
-
-    // Must create filesystem before mount
-    let fuse_fd = mount::mount(mount_path)
-        .await
-        .context("failed to mount fuse device")?;
-
-    let fuse_request_spawn_handle = TASK_MANAGER
-        .get_gc_handle(TaskName::FuseRequest)
-        .await
-        .unwrap_or_else(|| unreachable!("`FuseRequest` must be GC task."));
-
-    let fsarc = Arc::new(fs);
-    Ok(Session {
-        fuse_fd: Arc::new(FuseFd(fuse_fd)),
-        proto_version: AtomicCell::new(ProtoVersion::UNSPECIFIED),
-        mount_path: mount_path.to_owned(),
-        fuse_request_spawn_handle,
-        filesystem: fsarc,
-    })
-}
-
 impl<F: FileSystem + Send + Sync + 'static> Session<F> {
     /// Get FUSE device fd
     #[inline]
@@ -334,13 +295,13 @@ impl<F: FileSystem + Send + Sync + 'static> Session<F> {
         for _ in 0..MAX_FUSE_READER {
             let pool_tx = pool_sender.clone();
             let pool_rx = pool_receiver.clone();
-            let gc_handle = self.fuse_request_spawn_handle.clone();
+            // let gc_handle = self.fuse_request_spawn_handle.clone();
             let handle = Handle::current();
             let fs = Arc::clone(&self.filesystem);
             let protocol_version = self.proto_version.load();
             // The `JoinHandle` is ignored
             thread::spawn(move || {
-                fuse_device_reader(pool_tx, pool_rx, gc_handle, handle, protocol_version, fs);
+                fuse_device_reader(pool_tx, pool_rx, handle, protocol_version, fs);
             });
         }
 
