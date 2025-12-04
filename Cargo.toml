@@ -1,12 +1,12 @@
 [package]
 name = "async-fusex"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
-documentation = "https://docs.rs/async-fusex"
+documentation = "https://docs.rs/"
 description = "Async fuse library to make fuse develop easier"
 
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/arthur-zhang/poolx"
+repository = "https://github.com/arthur-zhang/async-fusex"
 keywords = ["fuse"]
 categories = ["asynchronous", "filesystem"]
 authors = [
