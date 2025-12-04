@@ -14,9 +14,11 @@ pub mod fuse_reply;
 pub mod fuse_request;
 pub mod mount;
 // ioctl_read!() macro involves inter arithmetic
-mod error;
-mod fs_util;
+pub mod error;
+pub mod fs_util;
 #[allow(clippy::arithmetic_side_effects)]
 pub mod protocol;
 pub mod session;
 mod util;
+mod virtual_fs;
+pub use virtual_fs::*;
