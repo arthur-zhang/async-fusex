@@ -1,8 +1,8 @@
 [package]
 name = "async-fusex"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
-documentation = "https://docs.rs/"
+documentation = "https://docs.rs/async-fusex"
 description = "Async fuse library to make fuse develop easier"
 
 license = "MIT OR Apache-2.0"

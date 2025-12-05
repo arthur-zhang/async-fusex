@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/async-fusex/badge.svg)](https://docs.rs/async-fusex)
 [![License](https://img.shields.io/crates/l/async-fusex.svg)](LICENSE)
 
-An async-friendly Rust library for building FUSE (Filesystem in Userspace) filesystems. Origin code is taken from DatenLord.
+An async-friendly Rust library for building FUSE (Filesystem in Userspace) filesystems. Original code is taken from DatenLord project, with many code modified.
 
 ## Overview
 
@@ -35,53 +35,67 @@ async-fusex = "0.1"
 
 ## Usage
 
-Implement the `FileSystem` trait and create a session:
+Implement the `VirtualFs` trait and create a session:
 
 ```rust
-use async_fusex::{FileSystem, Session, Request, ReplyEntry, ReplyAttr};
+use async_fusex::{
+    VirtualFs, FuseFs, DirEntry, FileType,
+    fs_util::{FileAttr, INum, ROOT_ID},
+    error::AsyncFusexResult,
+};
 use async_trait::async_trait;
 use tokio_util::sync::CancellationToken;
+use std::sync::Arc;
+use std::time::Duration;
 use std::path::Path;
 
 struct MyFilesystem;
 
 #[async_trait]
-impl FileSystem for MyFilesystem {
-    async fn init(&self, req: &Request<'_>) -> nix::Result<()> {
-        // Initialize your filesystem
-        Ok(())
-    }
-
+impl VirtualFs for MyFilesystem {
     async fn lookup(
         &self,
-        req: &Request<'_>,
-        parent: u64,
+        uid: u32,
+        gid: u32,
+        parent: INum,
         name: &str,
-        reply: ReplyEntry<'_>,
-    ) -> nix::Result<usize> {
-        // Handle directory entry lookup
+    ) -> AsyncFusexResult<(Duration, FileAttr, u64)> {
+        // Look up a directory entry by name and return its attributes
         // ...
     }
 
-    async fn getattr(
+    async fn forget(&self, ino: u64, nlookup: u64) {
+        // Called when the kernel removes an inode from its cache
+    }
+
+    async fn getattr(&self, ino: u64) -> AsyncFusexResult<(Duration, FileAttr)> {
+        // Return file attributes for the given inode
+        // ...
+    }
+
+    async fn readdir(
         &self,
-        req: &Request<'_>,
+        uid: u32,
+        gid: u32,
         ino: u64,
-        reply: ReplyAttr<'_>,
-    ) -> nix::Result<usize> {
-        // Return file attributes
+        fh: u64,
+        offset: i64,
+    ) -> AsyncFusexResult<Vec<DirEntry>> {
+        // Return directory entries
         // ...
     }
 
-    // Implement other operations as needed...
+    // Implement other operations as needed:
+    // open, read, write, mkdir, rmdir, unlink, etc.
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let fs = MyFilesystem;
+    let my_fs = Arc::new(MyFilesystem);
+    let fuse_fs = FuseFs::new(my_fs);
     let mountpoint = Path::new("/mnt/myfs");
 
-    let session = async_fusex::new_session(mountpoint, fs).await?;
+    let session = async_fusex::session::new_session(mountpoint, fuse_fs).await?;
     let token = CancellationToken::new();
 
     session.run(token).await?;
@@ -92,10 +106,16 @@ async fn main() -> anyhow::Result<()> {
 ## Architecture
 
 ```
-User Code (FileSystem Implementation)
+User Code (VirtualFs Implementation)
         │
         ▼
-FileSystem Trait (async interface)
+VirtualFs Trait (high-level async interface)
+        │
+        ▼
+    FuseFs (adapter)
+        │
+        ▼
+FileSystem Trait (low-level FUSE operations)
         │
         ▼
     Session (FUSE session manager)
