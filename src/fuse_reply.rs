@@ -30,7 +30,7 @@ use super::protocol::{FuseNotifyCode::FUSE_NOTIFY_DELETE, FuseNotifyDeleteOut};
 /// This trait describes a type that can be converted to `Vec<IoSlice>`
 pub trait AsIoSliceList {
     /// Convert the type to a Vec of `IoSlice`
-    fn as_io_slice_list(&self) -> Vec<IoSlice>;
+    fn as_io_slice_list(&self) -> Vec<IoSlice<'_>>;
     /// The sum of the length of all the `IoSlice`s in the Vec
     fn len(&self) -> usize;
     /// Vec of `IoSlice` is empty
@@ -43,7 +43,7 @@ impl<T> AsIoSliceList for Vec<T>
 where
     T: AsIoSlice,
 {
-    fn as_io_slice_list(&self) -> Vec<IoSlice> {
+    fn as_io_slice_list(&self) -> Vec<IoSlice<'_>> {
         self.iter().map(T::as_io_slice).collect()
     }
 
@@ -64,7 +64,7 @@ impl<T> AsIoSliceList for T
 where
     T: AsIoSlice + CouldBeAsIoSliceList,
 {
-    fn as_io_slice_list(&self) -> Vec<IoSlice> {
+    fn as_io_slice_list(&self) -> Vec<IoSlice<'_>> {
         vec![self.as_io_slice()]
     }
 
@@ -79,7 +79,7 @@ where
 
 /// Implement `AsIoSliceList` for Vec<u8> Separately
 impl AsIoSliceList for Vec<u8> {
-    fn as_io_slice_list(&self) -> Vec<IoSlice> {
+    fn as_io_slice_list(&self) -> Vec<IoSlice<'_>> {
         vec![self.as_io_slice()]
     }
 
@@ -94,7 +94,7 @@ impl AsIoSliceList for Vec<u8> {
 
 /// Implement `AsIoSliceList` for empty tuple
 impl AsIoSliceList for () {
-    fn as_io_slice_list(&self) -> Vec<IoSlice> {
+    fn as_io_slice_list(&self) -> Vec<IoSlice<'_>> {
         vec![]
     }
 
@@ -112,7 +112,7 @@ where
     U: AsIoSlice,
     V: AsIoSlice,
 {
-    fn as_io_slice_list(&self) -> Vec<IoSlice> {
+    fn as_io_slice_list(&self) -> Vec<IoSlice<'_>> {
         vec![self.0.as_io_slice(), self.1.as_io_slice()]
     }
 
@@ -128,7 +128,7 @@ where
 /// The trait indicates the ability to be converted to `IoSlice`
 pub trait AsIoSlice {
     /// Convert the type to `IoSlice`
-    fn as_io_slice(&self) -> IoSlice;
+    fn as_io_slice(&self) -> IoSlice<'_>;
     /// Tell if the type is ready to be converted, please call it before calling
     /// `as_io_slice`
     fn can_convert(&self) -> bool;
@@ -139,7 +139,7 @@ pub trait AsIoSlice {
 }
 
 impl AsIoSlice for Vec<u8> {
-    fn as_io_slice(&self) -> IoSlice {
+    fn as_io_slice(&self) -> IoSlice<'_> {
         IoSlice::new(self.as_slice())
     }
 
@@ -327,7 +327,7 @@ macro_rules! impl_as_ioslice_for {
     {$($t:ty,)+} => {
         $(impl AsIoSlice for $t {
             #[allow(dead_code)]
-            fn as_io_slice(&self) -> IoSlice {
+            fn as_io_slice(&self) -> IoSlice<'_> {
                 IoSlice::new(abi_marker::as_abi_bytes(self))
             }
 
@@ -710,7 +710,7 @@ impl ReplyXAttr<'_> {
 
 #[cfg(feature = "abi-7-18")]
 impl AsIoSlice for CString {
-    fn as_io_slice(&self) -> IoSlice {
+    fn as_io_slice(&self) -> IoSlice<'_> {
         IoSlice::new(self.as_bytes_with_nul())
     }
 

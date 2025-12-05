@@ -1,6 +1,6 @@
 [package]
 name = "async-fusex"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 documentation = "https://docs.rs/"
 description = "Async fuse library to make fuse develop easier"
@@ -31,3 +31,30 @@ tracing = "0.1.43"
 futures = "0.3.31"
 walkdir = "2.5.0"
 tracing-subscriber = "0.3.22"
+
+[features]
+default = ["abi-7-31"]
+abi-7-9 = []
+abi-7-10 = ["abi-7-9"]
+abi-7-11 = ["abi-7-10"]
+abi-7-12 = ["abi-7-11"]
+abi-7-13 = ["abi-7-12"]
+abi-7-14 = ["abi-7-13"]
+abi-7-15 = ["abi-7-14"]
+abi-7-16 = ["abi-7-15"]
+abi-7-17 = ["abi-7-16"]
+abi-7-18 = ["abi-7-17"]
+abi-7-19 = ["abi-7-18"]
+abi-7-20 = ["abi-7-19"]
+abi-7-21 = ["abi-7-20"]
+abi-7-22 = ["abi-7-21"]
+abi-7-23 = ["abi-7-22"]
+abi-7-24 = ["abi-7-23"]
+abi-7-25 = ["abi-7-24"]
+abi-7-26 = ["abi-7-25"]
+abi-7-27 = ["abi-7-26"]
+abi-7-28 = ["abi-7-27"]
+abi-7-29 = ["abi-7-28"]
+abi-7-30 = ["abi-7-29"]
+abi-7-31 = ["abi-7-30"]
+abi-7-32 = ["abi-7-31"]

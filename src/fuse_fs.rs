@@ -27,7 +27,6 @@ impl FuseFs {
 
 #[async_trait]
 impl FileSystem for FuseFs {
-    // Implemented DatenLordFs operations
 
     /// Initialize filesystem.
     /// Called before any other filesystem method.

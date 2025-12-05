@@ -42,7 +42,7 @@ impl TryFrom<SFlag> for FileType {
     /// # Returns
     ///
     /// * `Ok(FileType)` - If the conversion is successful.
-    /// * `Err(DatenLordError)` - If the `SFlag` value does not correspond to a
+    /// * `Err(AsyncFusexError)` - If the `SFlag` value does not correspond to a
     ///   known `FileType`.
     fn try_from(value: SFlag) -> Result<Self, Self::Error> {
         match value {

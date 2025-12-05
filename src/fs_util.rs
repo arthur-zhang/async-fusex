@@ -170,6 +170,7 @@ pub const NEED_CHECK_PERM: bool = false;
 
 impl FileAttr {
     /// New a `FileAttr`
+    #[allow(dead_code)]
     pub(crate) fn now() -> Self {
         let now = SystemTime::now();
         Self {
@@ -190,6 +191,7 @@ impl FileAttr {
     }
 
     /// Precheck before set attr
+    #[allow(dead_code)]
     pub(crate) fn setattr_precheck(
         &self,
         param: &SetAttrParam,

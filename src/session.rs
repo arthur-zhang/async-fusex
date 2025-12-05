@@ -87,14 +87,18 @@ mod _fuse_fd_clone {
         let cloned_fd = fcntl::open(devname, OFlag::O_RDWR | OFlag::O_CLOEXEC, Mode::empty())?;
         // use `OwnedFd` here is just to release the fd when error occurs
         // SAFETY: the `cloned_fd` is just opened
-        let cloned_fd = OwnedFd::from_raw_fd(cloned_fd);
+        let cloned_fd = unsafe {
+            OwnedFd::from_raw_fd(cloned_fd)
+        };
 
         fcntl::fcntl(cloned_fd.as_raw_fd(), FcntlArg::F_SETFD(FdFlag::FD_CLOEXEC))?;
 
         let mut result_fd: u32 = session_fd.cast();
         // SAFETY: `cloned_fd` is ensured to be valid, and `&mut result_fd` is a valid
         // pointer to a value on stack
-        fuse_fd_clone_impl(cloned_fd.as_raw_fd(), &mut result_fd)?;
+        unsafe {
+            fuse_fd_clone_impl(cloned_fd.as_raw_fd(), &mut result_fd)?
+        };
         Ok(cloned_fd.into_raw_fd()) // use `into_raw_fd` to transfer the
                                     // ownership of the fd
     }

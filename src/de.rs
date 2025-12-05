@@ -18,7 +18,7 @@ pub struct Deserializer<'b> {
 }
 
 /// Types which can be decoded from bytes
-#[allow(single_use_lifetimes)]
+#[allow(single_use_lifetimes,unused,dead_code)]
 pub trait Deserialize<'b>: Sized {
     /// Deserialize from bytes
     fn deserialize(
@@ -102,9 +102,11 @@ impl<'b> Deserializer<'b> {
 
     /// pop some bytes without length check
     unsafe fn pop_bytes_unchecked(&mut self, len: usize) -> &'b [u8] {
-        let bytes = self.bytes.get_unchecked(..len);
-        self.bytes = self.bytes.get_unchecked(len..);
-        bytes
+        unsafe {
+            let bytes = self.bytes.get_unchecked(..len);
+            self.bytes = self.bytes.get_unchecked(len..);
+            bytes
+        }
     }
 
     /// Get the length of the remaining bytes

@@ -112,6 +112,14 @@ FUSE Device Reader Threads + Tokio Runtime
 - Linux with FUSE support
 - Rust 2024 edition
 
+## get your fuse api version
+
+```
+dmesg | grep fuse
+
+[    2.095512] fuse: init (API version 7.39)
+```
+
 ## License
 
 Licensed under either of:
