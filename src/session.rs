@@ -28,7 +28,7 @@ use super::fuse_reply::{
     ReplyInit, ReplyLock, ReplyOpen, ReplyStatFs, ReplyWrite, ReplyXAttr,
 };
 use super::fuse_request::{Operation, Request};
-use super::mount;
+use super::{mount, FuseFs};
 #[cfg(feature = "abi-7-23")]
 use super::protocol::FATTR_CTIME;
 #[cfg(feature = "abi-7-9")]
@@ -249,15 +249,14 @@ pub struct Session<F: FileSystem + Send + Sync + 'static> {
     filesystem: Arc<F>,
     // fuse_request_spawn_handle: GcHandle,
 }
-pub async fn new_session<F>( mount_path: &Path, fs: F)->anyhow::Result<Session<F>> where F: FileSystem + Send + Sync + 'static {
+pub async fn new_session(mount_path: &Path, fs: FuseFs)->anyhow::Result<Session<FuseFs>>{
     let fuse_fd = mount::mount(mount_path).await.context("Failed to mount FUSE")?;
-    let fsarc = Arc::new(fs);
 
     Ok(Session{
         fuse_fd: Arc::new(FuseFd(fuse_fd)),
         proto_version: AtomicCell::new(ProtoVersion::UNSPECIFIED),
         mount_path: mount_path.to_owned(),
-        filesystem: fsarc,
+        filesystem: Arc::new(fs),
     })
 }
 

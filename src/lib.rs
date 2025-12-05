@@ -21,4 +21,7 @@ pub mod protocol;
 pub mod session;
 mod util;
 mod virtual_fs;
+mod fuse_fs;
+
 pub use virtual_fs::*;
+pub use fuse_fs::*;
